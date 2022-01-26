@@ -1,0 +1,101 @@
+version: "3"
+
+
+services:
+
+
+  vedai-substrate-node:
+    image: 'deipworld/staging-vedai-substrate-appchain-deip:latest'
+    container_name: vedai-substrate-node
+    restart: always
+    command: appchain-deip --dev --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all --base-path=/var/lib/deipd -lpallet_deip=debug -lpallet_deip_proposal=debug -lpallet_deip_dao=debug -lpallet_deip_assets=debug
+    ports:
+      - "9944:9944"
+      - "9933:9933"
+    volumes:
+      - vedai-blockchain:/var/lib/deipd
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 2048M
+        reservations:
+          memory: 1024M
+
+
+  vedai-web-server:
+    image: deipworld/staging-vedai-web-server:latest
+    container_name: vedai-web-server
+    restart: always
+    depends_on:
+      - vedai-substrate-node
+      - vedai-mongodb
+    links:
+      - vedai-substrate-node
+      - vedai-mongodb
+    ports:
+      - "9091:80"
+    environment:
+      # DEIP variables
+      NODE_ENV: development
+      PROTOCOL: 2
+      PORT: 80
+      DEIP_FULL_NODE_URL: http://vedai-substrate-node:9933
+      DEIP_SERVER_URL: http://localhost:9091
+      DEIP_CLIENT_URL: http://localhost:8080
+      DEIP_MONGO_STORAGE_CONNECTION_URL: mongodb://vedai:xZ6GZunKhaUzX44J@vedai-mongodb:27017/vedai-server?authSource=admin
+      FAUCET_ACCOUNT: '{ "username": "7d6219843195cffa1cf3eeed3e597eb880c58471", "wif": "//Alice", "fundingAmount": "1000000000000000000" }'
+      CORE_ASSET: '{ "id": "bf24eabc76676de16842add66633862b4ce4778a", "symbol": "TESTS", "precision": 12 }'
+      CHAIN_BLOCK_INTERVAL_MILLIS: 3000
+      TENANT: "2222222222222222222222222222222222222222"
+      TENANT_PRIV_KEY: 5Ke9KmpLDMbKkGsy9jCNNisQnEnkwy5f3gvvBkLLjiAFRwtPYau
+      TENANT_FILE_STORAGE_TYPE: 1
+    volumes:
+      - vedai-filestorage:/usr/src/app/files
+      - vedai-logstorage:/usr/src/app/logs
+
+
+  vedai-mongodb:
+    image: mongo:3.6.5
+    container_name: vedai-mongodb
+    restart: always
+    ports:
+      - "27117:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=vedai
+      - MONGO_INITDB_ROOT_PASSWORD=xZ6GZunKhaUzX44J
+    volumes: 
+      - vedai-mongostorage:/data/db
+
+
+  vedai-web-client:
+    image: deipworld/staging-vedai-web-client:latest
+    container_name: vedai-web-client
+    restart: always
+    depends_on:
+      - vedai-substrate-node
+    links:
+      - vedai-substrate-node
+    ports:
+      - "8080:80"
+    environment:
+      # DEIP variables
+      NODE_ENV: development
+      PROTOCOL: 2
+      TENANT: "2222222222222222222222222222222222222222"
+      DEIP_CLIENT_URL: http://localhost:8080
+      DEIP_SERVER_URL: http://localhost:9091
+      DEIP_FULL_NODE_URL: ws://localhost:9944
+      CORE_ASSET: '{ "id": "bf24eabc76676de16842add66633862b4ce4778a", "symbol": "TESTS", "precision": 12 }'
+      ACCOUNT_DEFAULT_FUNDING_AMOUNT: 100000000000000000
+
+
+volumes:
+  vedai-blockchain:
+    external: true
+  vedai-filestorage:
+    external: true
+  vedai-logstorage: 
+    external: true
+  vedai-mongostorage:
+    external: true
