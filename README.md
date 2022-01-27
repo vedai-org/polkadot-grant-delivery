@@ -24,7 +24,7 @@ Clean local environment from application containers and data volumes
 make clean
 ```
 
-Resatrt the application in local environment and purge existing data volumes
+Restart the application in local environment and purge existing data volumes
 ```sh
 make restart
 ```
